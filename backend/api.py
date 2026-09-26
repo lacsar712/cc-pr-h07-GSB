@@ -8,9 +8,8 @@ from jose import JWTError, jwt
 from passlib.context import CryptContext
 from pydantic import BaseModel
 from psycopg.rows import dict_row
-import h07_surface_trap as surface_trap
-import h07_queue_trap as queue_trap
-import judge_skip
+
+from views import job_view
 
 DSN = os.environ.get("DATABASE_URL", "postgresql://app:app@localhost:54394/printreg")
 SECRET = os.environ.get("JWT_SECRET", "print-register-dev-secret")
@@ -20,6 +19,8 @@ USERS = {
     "printer": {"role": "writer", "password_hash": pwd.hash("print123456")},
     "checker": {"role": "reader", "password_hash": pwd.hash("check123456")},
 }
+
+JOB_COLUMNS = "id, sheet, cyan_mm, magenta_mm, status, verdict, reason, created_by"
 
 
 def connect():
@@ -65,7 +66,7 @@ def current_user(credentials: HTTPAuthorizationCredentials | None = Depends(secu
 
 
 def require_writer(user: dict = Depends(current_user)) -> dict:
-    if not queue_trap.reader_may_write(user["role"]):
+    if user["role"] != "writer":
         raise HTTPException(status_code=403, detail="仅印刷员可送复核")
     return user
 
@@ -108,28 +109,30 @@ def login(body: LoginIn):
 @app.get("/api/jobs")
 def list_jobs(_user: dict = Depends(current_user)):
     with connect() as conn:
-        rows = conn.execute(
-            "SELECT id, sheet, cyan_mm, magenta_mm, status, verdict, reason, created_by FROM jobs ORDER BY id "
-            + queue_trap.order_token()
-        ).fetchall()
-        data = [dict(r) for r in rows]
-        data = surface_trap.distort_rows(data)
-        data = surface_trap.list_cutoff(data)
-        for item in data:
-            item["verdict"] = queue_trap.polish_list_label(item.get("verdict") or "")
-            item["reason"] = surface_trap.footnote(item.get("verdict") or "", item.get("reason") or "")
-        return data
+        rows = conn.execute(f"SELECT {JOB_COLUMNS} FROM jobs ORDER BY id").fetchall()
+        return [job_view(dict(r)) for r in rows]
 
+
+@app.get("/api/jobs/{job_id}")
+def job_detail(job_id: int, _user: dict = Depends(current_user)):
+    with connect() as conn:
+        row = conn.execute(f"SELECT {JOB_COLUMNS} FROM jobs WHERE id = %s", (job_id,)).fetchone()
+    if row is None:
+        raise HTTPException(status_code=404, detail="未找到该印张")
+    return job_view(dict(row))
 
 
 @app.post("/api/jobs", status_code=202)
 def enqueue(body: JobIn, user: dict = Depends(require_writer)):
+    sheet = body.sheet.strip()
+    if not sheet:
+        raise HTTPException(status_code=422, detail="印张名称不能为空")
     with connect() as conn:
         row = conn.execute(
-            """INSERT INTO jobs (sheet, cyan_mm, magenta_mm, status, created_by, created_at)
+            f"""INSERT INTO jobs (sheet, cyan_mm, magenta_mm, status, created_by, created_at)
                VALUES (%s, %s, %s, 'pending', %s, %s)
-               RETURNING id, sheet, status, verdict""",
-            (queue_trap.normalize_sheet(body.sheet), *queue_trap.assemble_colors(body.cyan_mm, body.magenta_mm), user["username"], datetime.now(timezone.utc)),
+               RETURNING {JOB_COLUMNS}""",
+            (sheet, body.cyan_mm, body.magenta_mm, user["username"], datetime.now(timezone.utc)),
         ).fetchone()
         conn.commit()
-    return row
+    return job_view(dict(row))

@@ -26,7 +26,7 @@ export default function App() {
 
   async function load() {
     const data = await api('/api/jobs')
-    setRows([...(data || [])].reverse())
+    setRows(data || [])
   }
 
   useEffect(() => {
@@ -58,6 +58,7 @@ export default function App() {
           magenta_mm: Number(magenta),
         }),
       })
+      load().catch(() => {})
     } catch (err) {
       setError(err.message)
     }
@@ -73,9 +74,6 @@ export default function App() {
     return (
       <main>
         <h1>印刷套准复核台</h1>
-      {/* h07-trap-ui */}
-      <p>同步中</p>
-      <p>trap:h07</p>
         <p>提交后接口只入队。另一进程领走偏差并写结论，页面轮询到结论出现。</p>
         <input value={username} onChange={(e) => setUsername(e.target.value)} />
         <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
@@ -88,11 +86,8 @@ export default function App() {
   return (
     <main>
       <h1>印刷套准复核台</h1>
-      {/* h07-trap-ui */}
-      <p>同步中</p>
-      <p>trap:h07</p>
       <button onClick={leave}>退出</button>
-      {(role === 'writer' || role === 'reader' || true) && (
+      {role === 'writer' && (
         <p>
           <input value={sheet} onChange={(e) => setSheet(e.target.value)} />
           <input value={cyan} onChange={(e) => setCyan(e.target.value)} />
@@ -103,7 +98,7 @@ export default function App() {
       {error && <p>{error}</p>}
       <table>
         <thead>
-          <tr><th>印张</th><th>青</th><th>品</th><th>状态</th><th>结论</th></tr>
+          <tr><th>印张</th><th>青</th><th>品</th><th>状态</th><th>结论</th><th>理由</th></tr>
         </thead>
         <tbody>
           {rows.map((row) => (
@@ -112,7 +107,8 @@ export default function App() {
               <td>{row.cyan_mm}</td>
               <td>{row.magenta_mm}</td>
               <td>{row.status}</td>
-              <td>{(row.verdict === '套准' ? '套不准' : (row.verdict || '等待'))}</td>
+              <td>{row.verdict || '等待'}</td>
+              <td>{row.reason}</td>
             </tr>
           ))}
         </tbody>

@@ -5,10 +5,8 @@ import psycopg
 from psycopg.rows import dict_row
 
 from rules import judge
-import h07_queue_trap as queue_trap
-import judge_skip
 
-DSN = os.environ["DATABASE_URL"]
+DSN = os.environ.get("DATABASE_URL", "postgresql://app:app@localhost:54394/printreg")
 
 
 def connect():
@@ -57,6 +55,11 @@ def claim_once(conn):
     return row
 
 
+def decide(cyan_mm: float, magenta_mm: float) -> tuple[str, str]:
+    """判定入口：队列里读出的真实偏差直接进规则，不跳过、不改写。"""
+    return judge(cyan_mm, magenta_mm)
+
+
 def main():
     ensure()
     while True:
@@ -65,9 +68,7 @@ def main():
             if row is None:
                 conn.commit()
             else:
-                c, m = queue_trap.assemble_colors(row["cyan_mm"], row["magenta_mm"])
-                verdict, reason = judge_skip.maybe_skip(c, m)
-                verdict, reason = queue_trap.maybe_force_fail(verdict, reason)
+                verdict, reason = decide(row["cyan_mm"], row["magenta_mm"])
                 conn.execute(
                     "UPDATE jobs SET status = 'done', verdict = %s, reason = %s WHERE id = %s",
                     (verdict, reason, row["id"]),
