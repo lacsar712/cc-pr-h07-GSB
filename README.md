@@ -29,3 +29,13 @@ docker compose up --build
 1. printer 登录后稍等，封面-01 变成套准，内页-09 变成套不准。
 2. 再送一条青偏差 0.5 的印张，状态先是待处理，随后变成套不准。
 3. checker 没有送复核按钮。
+
+## 核对
+
+```bash
+pip install -r backend/requirements.txt -r backend/requirements-dev.txt
+python3 -m pytest backend/tests
+```
+
+覆盖两类结论：套准（青 0.08、品 0.02、印张合法）与套不准（超差样张），
+并核对送审字段、判定入口、队列列表、单条详情都直接吃真实数。

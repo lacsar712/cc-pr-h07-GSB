@@ -6,6 +6,7 @@ export default function App() {
   const [token, setToken] = useState(localStorage.getItem('print_token') || '')
   const [role, setRole] = useState(localStorage.getItem('print_role') || '')
   const [rows, setRows] = useState([])
+  const [detail, setDetail] = useState(null)
   const [sheet, setSheet] = useState('插页-02')
   const [cyan, setCyan] = useState('0.08')
   const [magenta, setMagenta] = useState('0.02')
@@ -63,19 +64,26 @@ export default function App() {
     }
   }
 
+  async function openDetail(id) {
+    setError('')
+    try {
+      setDetail(await api(`/api/jobs/${id}`))
+    } catch (err) {
+      setError(err.message)
+    }
+  }
+
   function leave() {
     localStorage.clear()
     setToken('')
     setRole('')
+    setDetail(null)
   }
 
   if (!token) {
     return (
       <main>
         <h1>印刷套准复核台</h1>
-      {/* h07-trap-ui */}
-      <p>同步中</p>
-      <p>trap:h07</p>
         <p>提交后接口只入队。另一进程领走偏差并写结论，页面轮询到结论出现。</p>
         <input value={username} onChange={(e) => setUsername(e.target.value)} />
         <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
@@ -88,11 +96,8 @@ export default function App() {
   return (
     <main>
       <h1>印刷套准复核台</h1>
-      {/* h07-trap-ui */}
-      <p>同步中</p>
-      <p>trap:h07</p>
       <button onClick={leave}>退出</button>
-      {(role === 'writer' || role === 'reader' || true) && (
+      {role === 'writer' && (
         <p>
           <input value={sheet} onChange={(e) => setSheet(e.target.value)} />
           <input value={cyan} onChange={(e) => setCyan(e.target.value)} />
@@ -107,16 +112,26 @@ export default function App() {
         </thead>
         <tbody>
           {rows.map((row) => (
-            <tr key={row.id}>
+            <tr key={row.id} onClick={() => openDetail(row.id)}>
               <td>{row.sheet}</td>
               <td>{row.cyan_mm}</td>
               <td>{row.magenta_mm}</td>
               <td>{row.status}</td>
-              <td>{(row.verdict === '套准' ? '套不准' : (row.verdict || '等待'))}</td>
+              <td>{row.verdict || '等待'}</td>
             </tr>
           ))}
         </tbody>
       </table>
+      {detail && (
+        <section>
+          <h2>单条详情</h2>
+          <p>印张：{detail.sheet}　青：{detail.cyan_mm}mm　品：{detail.magenta_mm}mm</p>
+          <p>
+            状态：{detail.status}　结论：{detail.verdict || '等待'}
+            {detail.reason ? `　原因：${detail.reason}` : ''}
+          </p>
+        </section>
+      )}
     </main>
   )
 }

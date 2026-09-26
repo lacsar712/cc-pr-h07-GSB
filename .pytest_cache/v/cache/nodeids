@@ -1,0 +1,17 @@
+[
+  "backend/tests/test_verdicts.py::TestGuards::test_anonymous_rejected",
+  "backend/tests/test_verdicts.py::TestGuards::test_blank_sheet_rejected",
+  "backend/tests/test_verdicts.py::TestGuards::test_detail_missing_returns_404",
+  "backend/tests/test_verdicts.py::TestGuards::test_reader_can_list",
+  "backend/tests/test_verdicts.py::TestGuards::test_reader_cannot_submit",
+  "backend/tests/test_verdicts.py::TestInTolerance::test_detail_shows_real_cyan",
+  "backend/tests/test_verdicts.py::TestInTolerance::test_enqueue_keeps_real_fields",
+  "backend/tests/test_verdicts.py::TestInTolerance::test_list_shows_real_cyan_and_verdict",
+  "backend/tests/test_verdicts.py::TestInTolerance::test_rule_boundary_still_in",
+  "backend/tests/test_verdicts.py::TestInTolerance::test_rule_in_tolerance",
+  "backend/tests/test_verdicts.py::TestInTolerance::test_worker_entry_in_tolerance",
+  "backend/tests/test_verdicts.py::TestOutOfTolerance::test_detail_keeps_out_row_visible",
+  "backend/tests/test_verdicts.py::TestOutOfTolerance::test_list_keeps_out_row_visible",
+  "backend/tests/test_verdicts.py::TestOutOfTolerance::test_rule_out_of_tolerance",
+  "backend/tests/test_verdicts.py::TestOutOfTolerance::test_worker_entry_out_of_tolerance"
+]
